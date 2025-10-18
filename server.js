@@ -20,8 +20,10 @@ let isConnected = false;
 
 if (DB_URI && !DB_URI.includes('<db_username>')) {
     mongoose.connect(DB_URI, {
-        serverSelectionTimeoutMS: 5000,
-        socketTimeoutMS: 45000,
+        serverSelectionTimeoutMS: 2000,
+        socketTimeoutMS: 2000,
+        connectTimeoutMS: 2000,
+        bufferMaxEntries: 0
     })
     .then(() => {
         console.log('MongoDB connected successfully');
@@ -49,8 +51,11 @@ const Todo = mongoose.model('Todo', TodoSchema);
 
 // Serve the frontend HTML file
 app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'index.html'));
+    res.sendFile(path.join(__dirname, 'docs', 'index.html'));
 });
+
+// Serve static files from docs folder
+app.use(express.static(path.join(__dirname, 'docs')));
 
 // GET all tasks (Read)
 app.get('/api/tasks', async (req, res) => {
@@ -59,7 +64,7 @@ app.get('/api/tasks', async (req, res) => {
     }
     
     const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Timeout')), 3000)
+        setTimeout(() => reject(new Error('Timeout')), 1000)
     );
     
     try {
@@ -91,7 +96,7 @@ app.post('/api/tasks', async (req, res) => {
     }
     
     const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Timeout')), 3000)
+        setTimeout(() => reject(new Error('Timeout')), 1000)
     );
     
     try {
@@ -114,7 +119,7 @@ app.delete('/api/tasks/:id', async (req, res) => {
     }
     
     const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Timeout')), 3000)
+        setTimeout(() => reject(new Error('Timeout')), 1000)
     );
     
     try {
