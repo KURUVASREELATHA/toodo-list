@@ -18,7 +18,11 @@ console.log('Connecting to MongoDB using .env MONGO_URI...');
 
 let isConnected = false;
 
-mongoose.connect(DB_URI)
+if (DB_URI && !DB_URI.includes('<db_username>')) {
+    mongoose.connect(DB_URI, {
+        serverSelectionTimeoutMS: 5000,
+        socketTimeoutMS: 45000,
+    })
     .then(() => {
         console.log('MongoDB connected successfully');
         isConnected = true;
@@ -26,9 +30,12 @@ mongoose.connect(DB_URI)
     .catch(err => {
         console.error('MongoDB connection error:', err.message);
         console.log('Server will continue running without database connection');
-        console.log('Please check: 1) Username/password 2) IP whitelist 3) Database permissions');
         isConnected = false;
     });
+} else {
+    console.log('No valid MongoDB URI found, running in local mode');
+    isConnected = false;
+}
 
 // --- Mongoose Schema & Model ---
 const TodoSchema = new mongoose.Schema({
@@ -50,8 +57,16 @@ app.get('/api/tasks', async (req, res) => {
     if (!isConnected) {
         return res.json([]);
     }
+    
+    const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Timeout')), 3000)
+    );
+    
     try {
-        const tasks = await Todo.find().sort({ createdAt: -1 }); 
+        const tasks = await Promise.race([
+            Todo.find().sort({ createdAt: -1 }),
+            timeoutPromise
+        ]);
         res.json(tasks);
     } catch (err) {
         console.error("Error fetching tasks:", err.message);
@@ -65,26 +80,29 @@ app.post('/api/tasks', async (req, res) => {
          return res.status(400).json({ message: "Task text is required." });
     }
     
+    const mockTask = {
+        _id: Date.now().toString(),
+        text: req.body.text,
+        createdAt: new Date()
+    };
+    
     if (!isConnected) {
-        const mockTask = {
-            _id: Date.now().toString(),
-            text: req.body.text,
-            createdAt: new Date()
-        };
         return res.status(201).json(mockTask);
     }
     
-    const task = new Todo({ text: req.body.text });
+    const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Timeout')), 3000)
+    );
+    
     try {
-        const newTask = await task.save();
+        const task = new Todo({ text: req.body.text });
+        const newTask = await Promise.race([
+            task.save(),
+            timeoutPromise
+        ]);
         res.status(201).json(newTask);
     } catch (err) {
         console.error("Error creating task:", err.message);
-        const mockTask = {
-            _id: Date.now().toString(),
-            text: req.body.text,
-            createdAt: new Date()
-        };
         res.status(201).json(mockTask);
     }
 });
@@ -94,9 +112,16 @@ app.delete('/api/tasks/:id', async (req, res) => {
     if (!isConnected) {
         return res.json({ message: 'Task deleted successfully' });
     }
+    
+    const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Timeout')), 3000)
+    );
+    
     try {
-        const result = await Todo.findByIdAndDelete(req.params.id);
-        if (!result) return res.status(404).json({ message: 'Task not found' });
+        await Promise.race([
+            Todo.findByIdAndDelete(req.params.id),
+            timeoutPromise
+        ]);
         res.json({ message: 'Task deleted successfully' });
     } catch (err) {
         console.error("Error deleting task:", err.message);
