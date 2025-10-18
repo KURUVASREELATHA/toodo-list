@@ -38,16 +38,23 @@
         const taskList = document.getElementById('task-list');
         const taskInput = document.getElementById('task-input');
 
-        // --- Load tasks from backend ---
+        // --- Load tasks from backend or localStorage ---
         async function fetchTasks() {
             try {
                 const response = await fetch('/api/tasks');
-                const tasks = await response.json();
-                taskList.innerHTML = ''; 
-                tasks.forEach(task => displayTask(task));
+                if (response.ok) {
+                    const tasks = await response.json();
+                    taskList.innerHTML = ''; 
+                    tasks.forEach(task => displayTask(task));
+                    return;
+                }
             } catch (error) {
-                console.error('Error fetching tasks:', error);
+                console.error('Backend error, using localStorage:', error);
             }
+            // Fallback to localStorage
+            const tasks = JSON.parse(localStorage.getItem('tasks') || '[]');
+            taskList.innerHTML = ''; 
+            tasks.forEach(task => displayTask(task));
         }
 
         // --- Add a new task ---
@@ -55,29 +62,53 @@
             const text = taskInput.value.trim();
             if (text === "") return;
 
+            const newTask = {
+                _id: Date.now().toString(),
+                text: text,
+                createdAt: new Date()
+            };
+
             try {
                 const response = await fetch('/api/tasks', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ text: text })
                 });
-                const newTask = await response.json();
-                displayTask(newTask);
-                taskInput.value = '';
-                taskInput.focus();
+                if (response.ok) {
+                    const serverTask = await response.json();
+                    displayTask(serverTask);
+                    taskInput.value = '';
+                    taskInput.focus();
+                    return;
+                }
             } catch (error) {
-                console.error('Error adding task:', error);
+                console.error('Backend error, using localStorage:', error);
             }
+            // Fallback to localStorage
+            const tasks = JSON.parse(localStorage.getItem('tasks') || '[]');
+            tasks.unshift(newTask);
+            localStorage.setItem('tasks', JSON.stringify(tasks));
+            displayTask(newTask);
+            taskInput.value = '';
+            taskInput.focus();
         }
 
         // --- Delete a task ---
         async function removeTask(taskId, listItemElement) {
             try {
-                await fetch(`/api/tasks/${taskId}`, { method: 'DELETE' });
-                listItemElement.remove();
+                const response = await fetch(`/api/tasks/${taskId}`, { method: 'DELETE' });
+                if (response.ok) {
+                    listItemElement.remove();
+                    return;
+                }
             } catch (error) {
-                console.error('Error deleting task:', error);
+                console.error('Backend error, using localStorage:', error);
             }
+            // Fallback to localStorage
+            const tasks = JSON.parse(localStorage.getItem('tasks') || '[]');
+            const filteredTasks = tasks.filter(task => task._id !== taskId);
+            localStorage.setItem('tasks', JSON.stringify(filteredTasks));
+            listItemElement.remove();
         }
 
         // --- UI Rendering Function ---
