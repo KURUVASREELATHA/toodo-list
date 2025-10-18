@@ -41,10 +41,7 @@
         // --- Load tasks ---
         async function fetchTasks() {
             try {
-                const response = await fetch('/api/tasks', { 
-                    method: 'GET',
-                    timeout: 3000 
-                });
+                const response = await fetch('/api/tasks');
                 if (response.ok) {
                     const tasks = await response.json();
                     taskList.innerHTML = ''; 
@@ -52,7 +49,7 @@
                     return;
                 }
             } catch (error) {
-                console.log('Using local storage');
+                console.log('Using localStorage');
             }
             const tasks = JSON.parse(localStorage.getItem('tasks') || '[]');
             taskList.innerHTML = ''; 
@@ -78,8 +75,7 @@
                 await fetch('/api/tasks', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ text: text }),
-                    timeout: 3000
+                    body: JSON.stringify({ text: text })
                 });
             } catch (error) {
                 const tasks = JSON.parse(localStorage.getItem('tasks') || '[]');
@@ -93,10 +89,7 @@
             listItemElement.remove();
             
             try {
-                await fetch(`/api/tasks/${taskId}`, { 
-                    method: 'DELETE',
-                    timeout: 3000 
-                });
+                await fetch(`/api/tasks/${taskId}`, { method: 'DELETE' });
             } catch (error) {
                 const tasks = JSON.parse(localStorage.getItem('tasks') || '[]');
                 const filteredTasks = tasks.filter(task => task._id !== taskId);
