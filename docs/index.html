@@ -6,7 +6,6 @@
     <title>Full-Stack To-Do List</title>
     
     <style>
-        /* Basic CSS for presentation */
         body { font-family: Arial, sans-serif; background-color: #f4f4f9; display: flex; justify-content: center; padding: 40px; }
         #todo-container { background: #fff; padding: 30px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); width: 100%; max-width: 450px; }
         h1 { text-align: center; color: #333; }
@@ -27,37 +26,22 @@
             <input type="text" id="task-input" placeholder="Enter a new task...">
             <button id="add-button" onclick="addTask()">Add Task</button>
         </div>
-        <ul id="task-list">
-            </ul>
+        <ul id="task-list"></ul>
     </div>
 
     <script>
-        // Load tasks when the page is ready
         document.addEventListener('DOMContentLoaded', fetchTasks);
         
         const taskList = document.getElementById('task-list');
         const taskInput = document.getElementById('task-input');
 
-        // --- Load tasks ---
-        async function fetchTasks() {
-            try {
-                const response = await fetch('/api/tasks');
-                if (response.ok) {
-                    const tasks = await response.json();
-                    taskList.innerHTML = ''; 
-                    tasks.forEach(task => displayTask(task));
-                    return;
-                }
-            } catch (error) {
-                console.log('Using localStorage');
-            }
+        function fetchTasks() {
             const tasks = JSON.parse(localStorage.getItem('tasks') || '[]');
             taskList.innerHTML = ''; 
             tasks.forEach(task => displayTask(task));
         }
 
-        // --- Add a new task ---
-        async function addTask() {
+        function addTask() {
             const text = taskInput.value.trim();
             if (text === "") return;
 
@@ -67,37 +51,22 @@
                 createdAt: new Date()
             };
 
+            const tasks = JSON.parse(localStorage.getItem('tasks') || '[]');
+            tasks.unshift(newTask);
+            localStorage.setItem('tasks', JSON.stringify(tasks));
+            
             displayTask(newTask);
             taskInput.value = '';
             taskInput.focus();
-
-            try {
-                await fetch('/api/tasks', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ text: text })
-                });
-            } catch (error) {
-                const tasks = JSON.parse(localStorage.getItem('tasks') || '[]');
-                tasks.unshift(newTask);
-                localStorage.setItem('tasks', JSON.stringify(tasks));
-            }
         }
 
-        // --- Delete a task ---
-        async function removeTask(taskId, listItemElement) {
+        function removeTask(taskId, listItemElement) {
+            const tasks = JSON.parse(localStorage.getItem('tasks') || '[]');
+            const filteredTasks = tasks.filter(task => task._id !== taskId);
+            localStorage.setItem('tasks', JSON.stringify(filteredTasks));
             listItemElement.remove();
-            
-            try {
-                await fetch(`/api/tasks/${taskId}`, { method: 'DELETE' });
-            } catch (error) {
-                const tasks = JSON.parse(localStorage.getItem('tasks') || '[]');
-                const filteredTasks = tasks.filter(task => task._id !== taskId);
-                localStorage.setItem('tasks', JSON.stringify(filteredTasks));
-            }
         }
 
-        // --- UI Rendering Function ---
         function displayTask(task) {
             const listItem = document.createElement('li');
             listItem.innerHTML = `
@@ -108,19 +77,15 @@
             const removeButton = listItem.querySelector('.remove-btn');
             removeButton.onclick = () => removeTask(task._id, listItem); 
 
-            // Add the new task to the top of the list
             taskList.prepend(listItem);
         }
         
-        // Allow pressing Enter key to add a task
         taskInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
-                e.preventDefault(); // Prevent default form submit action
+                e.preventDefault();
                 addTask();
             }
         });
     </script>
 </body>
 </html>
-
-       
