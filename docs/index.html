@@ -38,71 +38,39 @@
         const taskList = document.getElementById('task-list');
         const taskInput = document.getElementById('task-input');
 
-        // --- GET all tasks from the backend ---
-        async function fetchTasks() {
-            try {
-                const response = await fetch('/api/tasks');
-                // Check for HTTP errors (like 500) before trying to parse JSON
-                if (!response.ok) { 
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                const tasks = await response.json();
-                
-                taskList.innerHTML = ''; 
-                // Ensure tasks is an array before calling forEach
-                if (Array.isArray(tasks)) {
-                    tasks.forEach(task => displayTask(task));
-                }
-            } catch (error) {
-                console.error('Error fetching tasks:', error);
-                alert('Could not load tasks. Check server console and database connection.');
-            }
+        // --- Load tasks from localStorage ---
+        function fetchTasks() {
+            const tasks = JSON.parse(localStorage.getItem('tasks') || '[]');
+            taskList.innerHTML = ''; 
+            tasks.forEach(task => displayTask(task));
         }
 
-        // --- POST a new task ---
-        async function addTask() {
+        // --- Add a new task ---
+        function addTask() {
             const text = taskInput.value.trim();
-            if (text === "") return; // Do nothing if empty
+            if (text === "") return;
 
-            try {
-                const response = await fetch('/api/tasks', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ text: text })
-                });
+            const newTask = {
+                _id: Date.now().toString(),
+                text: text,
+                createdAt: new Date()
+            };
 
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.message || 'Failed to add task');
-                }
-
-                const newTask = await response.json();
-                displayTask(newTask); 
-                taskInput.value = ''; 
-                taskInput.focus();
-            } catch (error) {
-                console.error('Error adding task:', error);
-                alert(`Error adding task: ${error.message}`);
-            }
+            const tasks = JSON.parse(localStorage.getItem('tasks') || '[]');
+            tasks.unshift(newTask);
+            localStorage.setItem('tasks', JSON.stringify(tasks));
+            
+            displayTask(newTask);
+            taskInput.value = '';
+            taskInput.focus();
         }
 
-        // --- DELETE a task ---
-        async function removeTask(taskId, listItemElement) {
-            try {
-                const response = await fetch(`/api/tasks/${taskId}`, {
-                    method: 'DELETE'
-                });
-
-                if (response.ok) {
-                    listItemElement.remove(); 
-                } else {
-                    const errorData = await response.json();
-                    throw new Error(errorData.message || 'Failed to delete task');
-                }
-            } catch (error) {
-                console.error('Error deleting task:', error);
-                alert(`Error deleting task: ${error.message}`);
-            }
+        // --- Delete a task ---
+        function removeTask(taskId, listItemElement) {
+            const tasks = JSON.parse(localStorage.getItem('tasks') || '[]');
+            const filteredTasks = tasks.filter(task => task._id !== taskId);
+            localStorage.setItem('tasks', JSON.stringify(filteredTasks));
+            listItemElement.remove();
         }
 
         // --- UI Rendering Function ---
